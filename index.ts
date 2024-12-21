@@ -25,6 +25,7 @@ bot.errorHandler = (error) => {
 logStart();
 
 if (IS_PRODUCTION) {
+  console.log("Listening on WebHook...");
   const handleUpdate = webhookCallback(bot, "bun");
 
   Bun.serve({
