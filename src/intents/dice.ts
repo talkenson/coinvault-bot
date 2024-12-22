@@ -1,6 +1,6 @@
-import { Bot } from "https://deno.land/x/grammy@v1.19.2/mod.ts";
-import { ATTEMPTS_LIMIT, CASINO_DICE, DICE_COST } from "../constants.ts";
-import { getGasTax } from "../gas.ts";
+import { Bot } from "grammy";
+import { ATTEMPTS_LIMIT, CASINO_DICE, DICE_COST } from "../../constants.ts";
+import { getGasTax } from "../gasTax.ts";
 import {
   DateTime,
   getFreespinCode,
@@ -11,7 +11,7 @@ import {
 } from "../helpers.ts";
 import { kv } from "../kv.ts";
 import { locales } from "../locales.ts";
-import { UserState } from "../types.ts";
+import type { UserState } from "../types.ts";
 import { linkFreespinCode } from "./redeemCode.ts";
 
 export default (bot: Bot) =>
@@ -22,7 +22,7 @@ export default (bot: Bot) =>
       // https://core.telegram.org/api/dice
       const values = [0, 2, 4].map((shift) => ((value - 1) >> shift) & 0b11);
 
-      const isForwarded = Boolean(ctx.update.message?.forward_date);
+      const isForwarded = Boolean(ctx.update.message?.forward_origin);
 
       if (isForwarded) {
         await ctx.reply(locales.doNotCheat(), {
@@ -40,10 +40,11 @@ export default (bot: Bot) =>
         .then(
           (state) =>
             state.value ??
-              initUserState(
-                ctx.from?.username || ctx.from?.first_name ||
-                  `User ID: ${userId}`,
-              ),
+            initUserState(
+              ctx.from?.username ||
+                ctx.from?.first_name ||
+                `User ID: ${userId}`,
+            ),
         );
 
       const currentDay = DateTime.now().setZone("UTC+7").set({
@@ -55,9 +56,9 @@ export default (bot: Bot) =>
 
       const isCurrentDay = currentDay.toMillis() === userState.lastDayUtc;
 
-      const isAttemptsLimitReached = userState.attemptCount >=
-          (ATTEMPTS_LIMIT + (userState.extraAttempts ?? 0)) &&
-        isCurrentDay;
+      const isAttemptsLimitReached =
+        userState.attemptCount >=
+          ATTEMPTS_LIMIT + (userState.extraAttempts ?? 0) && isCurrentDay;
 
       if (isAttemptsLimitReached) {
         await ctx.reply(
@@ -85,7 +86,7 @@ export default (bot: Bot) =>
       const [maxFrequent, maxFrequency, rolls] = getMaxFrequency(values);
 
       const prize = getPrize(maxFrequent, maxFrequency, rolls);
-      const isWin = (prize - fixedLoss) > 0;
+      const isWin = prize - fixedLoss > 0;
 
       const nextUserState: UserState = {
         ...userState,
@@ -104,19 +105,14 @@ export default (bot: Bot) =>
         : locales.lose(fixedLoss, prize);
       const yourBalance = locales.yourBalance(nextUserState.coins);
 
-      await ctx.reply(
-        [result, yourBalance].join(
-          "\n",
-        ),
-        {
-          reply_to_message_id: ctx.update.message?.message_id,
-          parse_mode: "HTML",
-        },
-      );
+      await ctx.reply([result, yourBalance].join("\n"), {
+        reply_to_message_id: ctx.update.message?.message_id,
+        parse_mode: "HTML",
+      });
 
-      const freespinCode = isNotPrivateChat && await getFreespinCode(userId);
-      const freespinCodeIntergration = freespinCode &&
-        locales.freespinQuote(freespinCode);
+      const freespinCode = isNotPrivateChat && (await getFreespinCode(userId));
+      const freespinCodeIntergration =
+        freespinCode && locales.freespinQuote(freespinCode);
 
       if (freespinCode && freespinCodeIntergration) {
         const reply = await ctx.reply(freespinCodeIntergration, {

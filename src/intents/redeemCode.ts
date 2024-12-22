@@ -1,39 +1,40 @@
-import * as uuid from "https://deno.land/std@0.202.0/uuid/mod.ts";
-import { Bot } from "https://deno.land/x/grammy@v1.19.2/mod.ts";
+import { v4, validate as uuidValidate } from "uuid";
+import { Bot } from "grammy";
 import { kv } from "../kv.ts";
 import { getUserKey } from "../helpers.ts";
-import { UserState } from "../types.ts";
-import { CURRENT_KEY, DICE_COST } from "../constants.ts";
-import { Message } from "https://deno.land/x/grammy_types@v3.3.0/message.ts";
+import type { UserState } from "../types.ts";
+import { ADMINS, CURRENT_KEY, DICE_COST } from "../../constants.ts";
+import type { Message } from "grammy/types";
 import { locales } from "../locales.ts";
 
 export const getCodeKey = (id: string) => [`${CURRENT_KEY}-code-treasure`, id];
 
-export type Code = {
-  active: true;
-  issuedBy: number;
-  messageId?: number;
-  chatId?: number;
-} | {
-  active: false;
-};
+export type Code =
+  | {
+      active: true;
+      issuedBy: number;
+      messageId?: number;
+      chatId?: number;
+    }
+  | {
+      active: false;
+    };
 
 export default (bot: Bot) => {
-  // bot.command("codegen", async (ctx) => {
-  //   const userId = ctx.from?.id;
+  bot.command("codegen", async (ctx) => {
+    const userId = ctx.from?.id;
 
-  //   if (!userId) return;
+    if (!userId || !ADMINS.includes(userId.toString())) return;
 
-  //   const codeText = crypto.randomUUID();
+    const codeText = crypto.randomUUID();
 
-  //   const code = await kv
-  //     .set(getCodeKey(codeText), {
-  //       active: true,
-  //       issuedBy: userId,
-  //     } as Code);
+    const code = await kv.set(getCodeKey(codeText), {
+      active: true,
+      issuedBy: userId,
+    } as Code);
 
-  //   return await ctx.reply(codeText);
-  // });
+    return await ctx.reply(codeText);
+  });
 
   bot.command("redeem", async (ctx) => {
     if (ctx.chat.type !== "private") {
@@ -44,7 +45,7 @@ export default (bot: Bot) => {
 
     const codeText = ctx.message?.text.split(/\s+/)[1];
 
-    if (!codeText || !uuid.validate(codeText)) {
+    if (!codeText || !uuidValidate(codeText)) {
       return await ctx.reply(`Код недействителен`);
     }
 
@@ -52,30 +53,21 @@ export default (bot: Bot) => {
 
     if (!userId) return;
 
-    const code = await kv
-      .get<Code>(getCodeKey(codeText))
-      .then(
-        (state): Code =>
-          state.value ??
-            {
-              active: false,
-            },
-      );
+    const code = await kv.get<Code>(getCodeKey(codeText)).then(
+      (state): Code =>
+        state.value ?? {
+          active: false,
+        },
+    );
 
     if (code.active) {
       if (code.issuedBy === userId) {
-        return await ctx.reply(
-          "Упс, а вот свой код обналичить нельзя 🥲",
-        );
+        return await ctx.reply("Упс, а вот свой код обналичить нельзя 🥲");
       }
 
       const userState = await kv
         .get<UserState>(getUserKey(userId))
-        .then(
-          (state) =>
-            state.value ??
-              undefined,
-        );
+        .then((state) => state.value ?? undefined);
 
       if (!userState) {
         return await ctx.reply(
@@ -103,10 +95,8 @@ export default (bot: Bot) => {
       await kv
         .atomic()
         .delete(getCodeKey(codeText))
-        .set(
-          getUserKey(userId),
-          nextUserState,
-        ).commit();
+        .set(getUserKey(userId), nextUserState)
+        .commit();
 
       return await ctx.reply(
         `Вот это скорость! У вас теперь есть еще одна крутка (и ${DICE_COST} монет), она выйдет почти бесплатная, и она будет действовать до полуночи по UTC`,
@@ -120,11 +110,10 @@ export default (bot: Bot) => {
 export const createFreespinCode = async (userId: number) => {
   const codeText = crypto.randomUUID();
 
-  await kv
-    .set(getCodeKey(codeText), {
-      active: true,
-      issuedBy: userId,
-    } as Code);
+  await kv.set(getCodeKey(codeText), {
+    active: true,
+    issuedBy: userId,
+  } as Code);
 
   return codeText;
 };
@@ -133,16 +122,15 @@ export const linkFreespinCode = async (
   code: string,
   message: Message.TextMessage,
 ) => {
-  const codeState = await kv.get<Code>(getCodeKey(code)).then((state) =>
-    state.value ?? undefined
-  );
+  const codeState = await kv
+    .get<Code>(getCodeKey(code))
+    .then((state) => state.value ?? undefined);
 
   if (!codeState || !codeState.active) return;
 
-  await kv
-    .set(getCodeKey(code), {
-      ...codeState,
-      messageId: message.message_id,
-      chatId: message.chat.id,
-    });
+  await kv.set(getCodeKey(code), {
+    ...codeState,
+    messageId: message.message_id,
+    chatId: message.chat.id,
+  });
 };

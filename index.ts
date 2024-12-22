@@ -1,8 +1,14 @@
-import { Bot, webhookCallback } from "grammy";
-import { BOT_TOKEN, IS_PRODUCTION } from "./constants.ts";
+import { webhookCallback } from "grammy";
+import { CURRENT_KEY, IS_PRODUCTION } from "./constants.ts";
 import { logStart } from "./src/general.ts";
-
-const bot = new Bot(BOT_TOKEN);
+import { bot } from "./src/bot.ts";
+import { locales } from "./src/locales.ts";
+import dice from "./src/intents/dice.ts";
+import redeemCode from "./src/intents/redeemCode.ts";
+import horses from "./src/intents/horses.ts";
+import { getUserStateSafe } from "./src/helpers.ts";
+import { kv } from "./src/kv.ts";
+import type { UserState } from "./src/types.ts";
 
 bot.command("__debug", async (ctx) => {
   await ctx.reply(
@@ -16,6 +22,50 @@ bot.command("__debug", async (ctx) => {
       reply_to_message_id: ctx.message?.message_id,
     },
   );
+});
+
+bot.command("help", async (ctx) => {
+  await ctx.reply(locales.help(), {
+    reply_to_message_id: ctx.update.message?.message_id,
+  });
+});
+
+// init
+dice(bot);
+redeemCode(bot);
+horses(bot);
+// init end
+
+bot.command("top", async (ctx) => {
+  const users = await kv.list<UserState>({ prefix: [CURRENT_KEY] });
+
+  const usersTop: UserState[] = [];
+
+  for await (const user of users) {
+    usersTop.push(user.value);
+  }
+
+  usersTop.sort((a, b) => b.coins - a.coins);
+
+  const usersTopStrings = usersTop
+    .slice(0, 20)
+    .map((user, index) => `${index + 1}. ${user.displayName} - ${user.coins}`);
+
+  await ctx.reply([locales.topPlayers(), ...usersTopStrings].join("\n"), {
+    reply_to_message_id: ctx.update.message?.message_id,
+  });
+});
+
+bot.command("balance", async (ctx) => {
+  const id = ctx.from?.id;
+  if (!id) return;
+
+  const user = await getUserStateSafe(ctx);
+
+  await ctx.reply(locales.yourBalance(user!.coins), {
+    reply_to_message_id: ctx.update.message?.message_id,
+    parse_mode: "HTML",
+  });
 });
 
 bot.errorHandler = (error) => {

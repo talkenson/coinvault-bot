@@ -1,5 +1,5 @@
-import { Bot } from "https://deno.land/x/grammy@v1.19.2/mod.ts";
-import { kv } from "../kv.ts";
+import { Bot } from "grammy";
+import { collectList, kv } from "../kv.ts";
 import {
   DateTime,
   getCurrentDate,
@@ -7,18 +7,19 @@ import {
   getUserStateSafe,
   stripFirst,
 } from "../helpers.ts";
-import { UserState } from "../types.ts";
-import { ADMINS, CURRENT_KEY } from "../constants.ts";
+import type { UserState } from "../types.ts";
+import { ADMINS, CURRENT_KEY } from "../../constants.ts";
 import { drawHorses } from "../generators/draw.ts";
 import {
   createSpeeds,
   genPlaces,
   getKs,
-  Koefs,
+  type Koefs,
 } from "../generators/horse_sequence.ts";
 import { renderFramesToGIF } from "../generators/renderFramesToGIF.ts";
-import { InputFile } from "https://deno.land/x/grammy@v1.19.2/types.deno.ts";
+import { InputFile } from "grammy";
 import { locales } from "../locales.ts";
+import type { KvKey } from "@deno/kv";
 
 export const createHorsesKey = (intentType: string, currentDate: DateTime) => [
   `${CURRENT_KEY}-intent-horse`,
@@ -54,17 +55,22 @@ const getStakesAndKs = async () => {
   const stakes = Object.fromEntries(
     Array.from({ length: HORSE_COUNT }, (_, i) => [i, 0]),
   );
-  const _bets = await kv.list<HorseBet>({ prefix: getHorsesBetsKey() });
+  // const _bets = await kv.list<HorseBet>({ prefix: getHorsesBetsKey() });
 
-  const bets: { key: Deno.KvKey; value: HorseBet }[] = [];
+  const bets: { key: KvKey; value: HorseBet }[] =
+    await collectList(getHorsesBetsKey());
 
-  for await (const bet of _bets) {
-    bets.push({ key: bet.key, value: bet.value });
-  }
+  console.log(stakes, bets);
+
+  // for await (const bet of _bets) {
+  //   bets.push({ key: bet.key, value: bet.value });
+  // }
 
   bets.forEach((bet) => {
     stakes[bet.value.horseId] += bet.value.amount;
   });
+
+  console.log(stakes, bets);
 
   return {
     individualStakes: bets,
@@ -74,7 +80,7 @@ const getStakesAndKs = async () => {
 };
 
 const payoff = async (
-  allStakes: { key: Deno.KvKey; value: HorseBet }[],
+  allStakes: { key: KvKey; value: HorseBet }[],
   ks: Koefs,
   winId: number,
 ) => {
@@ -98,19 +104,25 @@ const payoff = async (
 
   const userList = [...users.values()];
 
-  const batchedTx = transactions.reduce<Record<number, number>>((acc, v) => {
-    acc[v.to] += v.amount;
-    return acc;
-  }, Object.fromEntries(userList.map((user) => [user, 0])));
+  const batchedTx = transactions.reduce<Record<number, number>>(
+    (acc, v) => {
+      acc[v.to] += v.amount;
+      return acc;
+    },
+    Object.fromEntries(userList.map((user) => [user, 0])),
+  );
 
   const userStates = await kv.getMany<UserState[]>(
     userList.map((user) => getUserKey(user)),
   );
 
-  const newUserStates: { key: Deno.KvKey; value: UserState }[] = userStates
+  const newUserStates: { key: KvKey; value: UserState }[] = userStates
     .filter((state) => {
       const user = state.key.at(-1);
-      if (!state.value || !user || typeof user !== "string") return false;
+      if (!state.value || !user) {
+        return false;
+      }
+      return true;
     })
     .map((state) => {
       const user = state.key.at(-1);
@@ -118,7 +130,8 @@ const payoff = async (
         key: state.key,
         value: {
           ...(state.value as UserState),
-          coins: state.value!.coins +
+          coins:
+            state.value!.coins +
             (user ? batchedTx?.[user as unknown as number] : 0),
         },
       };
@@ -178,20 +191,20 @@ export default (bot: Bot) => {
         ctx.reply(
           txs.length > 0
             ? [
-              "<b>Поздравляем победителей!</b>\n",
-              ...txs.map(
-                (tx, i) =>
-                  `<a href="tg://user?id=${tx.to}">Победитель ${
-                    i + 1
-                  }</a>: <b>+${tx.amount}</b>`,
-              ),
-            ].join("\n")
+                "<b>Поздравляем победителей!</b>\n",
+                ...txs.map(
+                  (tx, i) =>
+                    `<a href="tg://user?id=${tx.to}">Победитель ${
+                      i + 1
+                    }</a>: <b>+${tx.amount}</b>`,
+                ),
+              ].join("\n")
             : "<b>Сегодня никому не удалось победить :(</b>",
           {
             parse_mode: "HTML",
           },
         ),
-      40_000,
+      20_000,
     );
   });
 
@@ -241,9 +254,7 @@ export default (bot: Bot) => {
         });
       }
       const amount = parseInt(_amount);
-      if (
-        Number.isNaN(amount) || amount <= 0 || amount > coins
-      ) {
+      if (Number.isNaN(amount) || amount <= 0 || amount > coins) {
         return await ctx.reply(
           `Указана неверная ставка (ваш баланс: ${coins})`,
           {
@@ -304,9 +315,12 @@ export default (bot: Bot) => {
         },
       );
     } else {
-      return await ctx.reply(`Неизвестное действие ${action}`, {
-        reply_to_message_id: ctx.update.message?.message_id,
-      });
+      return await ctx.reply(
+        `Неизвестное действие ${action}\nМожно: bet, result, info`,
+        {
+          reply_to_message_id: ctx.update.message?.message_id,
+        },
+      );
     }
   });
 };

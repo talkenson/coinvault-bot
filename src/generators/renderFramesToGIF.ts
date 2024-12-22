@@ -8,7 +8,7 @@ export const renderFramesToGIF = async (
 ) => {
   const frames = (
     await Promise.all(images.map((imageBuffer) => Image.decode(imageBuffer)))
-  ).map((image) => Frame.from(image, 16));
+  ).map((image) => Frame.from(image, 64));
 
   const gif = new GIF(frames, 0);
 
