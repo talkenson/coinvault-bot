@@ -3,12 +3,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    depends_on:
+      - denokv
     env_file:
       - .env
     environment:
       - DENO_KV_HOST=http://denokv:4512
     ports:
       - "3000:3000"
+    networks:
+      - kv_net
 
   denokv:
     image: ghcr.io/denoland/denokv
@@ -20,3 +24,8 @@ services:
     env_file:
       - .env
     init: true
+    networks:
+      - kv_net
+
+networks:
+  kv_net:
