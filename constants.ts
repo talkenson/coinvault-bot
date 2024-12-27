@@ -21,3 +21,5 @@ export const CASINO_DICE = "🎰";
 export const FREECODE_PROB = Number(Bun.env.FREECODE_PROB ?? 0.15);
 
 export const ADMINS = (Bun.env.ADMINS ?? "").split(",").filter((v) => v.length);
+
+export const APP_VERSION = '0.0.1'

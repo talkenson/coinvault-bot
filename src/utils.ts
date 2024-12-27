@@ -1,3 +1,5 @@
+import type { KvEntry, KvEntryMaybe } from "@deno/kv";
+
 export const plural = (
   number: number,
   titles: string[],
@@ -22,3 +24,10 @@ export const getSafeNumber = (x: number): { safe: boolean; value: number } => {
 
 export const getRandomFromArray = <Type extends unknown>(arr: Type[]) =>
   arr[Math.floor(Math.random() * arr.length)];
+
+export const isKvEntry = <Type extends unknown>(
+  state: KvEntryMaybe<Type>,
+): state is KvEntry<Type> => {
+  if (state.value === null && state.versionstamp === null) return false;
+  return true;
+};
