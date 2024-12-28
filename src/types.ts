@@ -1,7 +1,14 @@
-export type UserState = {
+export type UserData = {
+  id: number;
   displayName: string;
-  coins: number;
-  lastDayUtc: number;
-  attemptCount: number;
-  extraAttempts?: number;
+  username?: string;
+  is_premium?: true;
+  is_bot: boolean;
+};
+
+export type Transaction = {
+  timestamp: number;
+  sender: string;
+  recipient: string;
+  amount: number;
 };

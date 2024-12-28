@@ -1,7 +1,6 @@
 import { Elysia } from "elysia";
 import { webhookCallback } from "grammy";
 import { APP_VERSION, IS_PRODUCTION } from "./constants.ts";
-import { logStart } from "./src/general.ts";
 import { bot } from "./src/bot.ts";
 import telegramHandler from "./src/telegram";
 
@@ -41,4 +40,4 @@ if (IS_PRODUCTION) {
 
 app.listen(3000);
 
-logStart();
+console.log("Listening at http://localhost:3000");

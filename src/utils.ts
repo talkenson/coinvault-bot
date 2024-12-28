@@ -16,11 +16,32 @@ export const plural = (
   return includeNumber ? `${number} ${text}` : text;
 };
 
-export const getSafeNumber = (x: number): { safe: boolean; value: number } => {
-  if (Number.isNaN(x)) return { safe: false, value: 0 };
-  if (!Number.isFinite(x)) return { safe: false, value: 0 };
-  return { safe: true, value: x };
-};
+/**
+ * Safely parses a number from a string.
+ */
+export function safeParseNumber<T extends number | undefined>(
+  str: string,
+  defaultValue: T,
+): T extends number ? number : T {
+  // Trim the string to remove leading/trailing whitespace
+  const trimmedStr = str.trim();
+
+  // Check if the trimmed string is empty
+  if (trimmedStr === "") {
+    return defaultValue as T extends number ? number : T;
+  }
+
+  // Attempt to parse the number
+  const parsedNumber = Number(trimmedStr);
+
+  // Check if the parsed number is finite and not NaN
+  if (!isNaN(parsedNumber) && isFinite(parsedNumber)) {
+    return parsedNumber as T extends number ? number : T;
+  }
+
+  // Return the default value if parsing fails
+  return defaultValue as T extends number ? number : T;
+}
 
 export const getRandomFromArray = <Type extends unknown>(arr: Type[]) =>
   arr[Math.floor(Math.random() * arr.length)];
