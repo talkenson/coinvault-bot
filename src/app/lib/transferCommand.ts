@@ -71,7 +71,7 @@ export const transferCommand = async (
 от: <a href="tg://user?id=${payload.sender}">${
           ctx.session.cache.user?.username
             ? `@${ctx.session.cache.user.username}`
-            : ""
+            : payload.sender
         }</a> (${payload.sender})
 
 <b>+${plural(safeAmount, moneyFormsStd, true)}</b>`,
