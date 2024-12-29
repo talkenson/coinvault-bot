@@ -79,6 +79,12 @@ export const httpRouter = new Elysia({ prefix: "/api/v1" })
       if (app !== "admin" && (!storedToken || storedToken !== token)) {
         return { status: false, error: "Forbidden: Invalid token." };
       }
+      if (userId === from) {
+        return {
+          status: false,
+          error: "Forbidden: Transfer for your own wallet is not valid.",
+        };
+      }
       const status = await transferFunds(from, userId, amount);
       if (!status.ok) {
         return { status: false, error: status.error };
