@@ -1,6 +1,6 @@
 import type { CommandContext } from "grammy";
 import type { BotPatchedContext, BotType } from "../../session/types.ts";
-import { plural, safeParseNumber } from "../../utils.ts";
+import { plural, safeParseAmount, safeParseNumber } from "../../utils.ts";
 import { transferFunds } from "../use-cases/transferFunds.ts";
 import { pendingBalanceUpdatesAccounts } from "../../session/setupSessions.ts";
 import { moneyFormsStd } from "../../locales.ts";
@@ -21,10 +21,16 @@ export const transferCommand = async (
     return;
   }
 
-  const safeAmount = safeParseNumber(payload.amount, 0);
+  const safeAmount = safeParseAmount(payload.amount, 0);
 
   if (safeAmount <= 0) {
     return ctx.reply("C этим я ничего сделать не могу");
+  }
+
+  if (payload.sender === payload.recipient) {
+    return ctx.reply(
+      "Нельзя переводить деньги со своего кошелька на свой кошелек",
+    );
   }
 
   const oldMsg = await ctx.reply("Пытаюсь перевести...");

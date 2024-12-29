@@ -20,9 +20,11 @@ export const plural = (
  * Safely parses a number from a string.
  */
 export function safeParseNumber<T extends number | undefined>(
-  str: string,
+  str: string | undefined,
   defaultValue: T,
 ): T extends number ? number : T {
+  if (!str) return defaultValue as T extends number ? number : T;
+
   // Trim the string to remove leading/trailing whitespace
   const trimmedStr = str.trim();
 
@@ -35,12 +37,48 @@ export function safeParseNumber<T extends number | undefined>(
   const parsedNumber = Number(trimmedStr);
 
   // Check if the parsed number is finite and not NaN
-  if (!isNaN(parsedNumber) && isFinite(parsedNumber)) {
-    return parsedNumber as T extends number ? number : T;
+  if (isNaN(parsedNumber) || !isFinite(parsedNumber)) {
+    return defaultValue as T extends number ? number : T;
   }
 
-  // Return the default value if parsing fails
-  return defaultValue as T extends number ? number : T;
+  return parsedNumber as T extends number ? number : T;
+}
+
+export function safeParseAmount<T extends number | undefined>(
+  str: string | undefined,
+  defaultValue: T,
+): T extends number ? number : T {
+  if (!str) return defaultValue as T extends number ? number : T;
+
+  // Trim the string to remove leading/trailing whitespace
+  const trimmedStr = str.trim();
+
+  // Check if the trimmed string is empty
+  if (trimmedStr === "") {
+    return defaultValue as T extends number ? number : T;
+  }
+
+  // Attempt to parse the number
+  const parsedNumber = Number(trimmedStr);
+
+  // Check if the parsed number is finite and not NaN
+  if (isNaN(parsedNumber) || !isFinite(parsedNumber)) {
+    return defaultValue as T extends number ? number : T;
+  }
+
+  const isValidDigitOnly = /^(\d+)$/i.test(str);
+
+  if (!isValidDigitOnly) {
+    return defaultValue as T extends number ? number : T;
+  }
+
+  const parsedInt = parseInt(str, 10);
+
+  if (parsedInt.toString(10) !== str) {
+    return defaultValue as T extends number ? number : T;
+  }
+
+  return parsedInt as T extends number ? number : T;
 }
 
 export const getRandomFromArray = <Type extends unknown>(arr: Type[]) =>

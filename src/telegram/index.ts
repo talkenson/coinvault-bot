@@ -103,6 +103,9 @@ ${ctx.session.cache.user.displayName}, адрес вашего кошелька:
 
     const [_recipient, _amount] = stripFirst(ctx.message.text).split(/\s+/);
 
+    if (!_recipient || !_amount || !_recipient.length || !_amount.length)
+      return ctx.reply("Используйте: /transfer <ID> <amount>");
+
     await transferCommand(ctx, bot, {
       recipient: _recipient,
       amount: _amount,

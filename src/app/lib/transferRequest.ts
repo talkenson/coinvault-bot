@@ -11,7 +11,7 @@ export interface TransferRequestPayload {
   app: string;
 }
 
-export const transferCommand = async (payload: TransferRequestPayload) => {
+export const transferRequest = async (payload: TransferRequestPayload) => {
   const balance = await getBalance(payload.sender);
   const senderId = safeParseNumber(payload.sender, 0);
   pendingBalanceUpdatesAccounts.add(senderId);

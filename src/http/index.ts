@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { getAppToken } from "../app/use-cases/getAppToken.ts";
 import { getBalance } from "../app/use-cases/getBalance.ts";
 import { transferFunds } from "../app/use-cases/transferFunds.ts";
-import { transferCommand } from "../app/lib/transferRequest.ts";
+import { transferRequest } from "../app/lib/transferRequest.ts";
 
 export const httpRouter = new Elysia({ prefix: "/api/v1" })
   .get(
@@ -84,7 +84,7 @@ export const httpRouter = new Elysia({ prefix: "/api/v1" })
         return { status: false, error: status.error };
       }
 
-      await transferCommand({
+      await transferRequest({
         sender: from,
         recipient: userId,
         amount,
@@ -99,9 +99,9 @@ export const httpRouter = new Elysia({ prefix: "/api/v1" })
           minLength: 1,
           description: "ID Получателя",
         }),
-        amount: t.Number({
+        amount: t.Integer({
           minimum: 0,
-          description: "Сумма",
+          description: "Сумма, целым числом",
         }),
       }),
       query: t.Object({
