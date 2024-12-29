@@ -1,6 +1,11 @@
 import { Elysia } from "elysia";
 import { webhookCallback } from "grammy";
-import { APP_VERSION, IS_PRODUCTION } from "./constants.ts";
+import {
+  APP_VERSION,
+  BOT_DOMAIN,
+  BOT_TOKEN,
+  IS_PRODUCTION,
+} from "./constants.ts";
 import { bot } from "./src/bot.ts";
 import telegramHandler from "./src/telegram";
 import { httpRouter } from "./src/http";
@@ -27,7 +32,7 @@ const app = new Elysia()
   .use(httpRouter);
 
 if (IS_PRODUCTION) {
-  console.log("Production, using WebHook...");
+  console.log("[ENV] + Production");
   const handleUpdate = webhookCallback(bot, "bun");
 
   app
@@ -43,6 +48,16 @@ if (IS_PRODUCTION) {
       console.log(
         `🦊 CoinVault PRODUCTION (Elysia) is running at ${hostname}:${port}`,
       );
+
+      fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${BOT_DOMAIN}/${BOT_TOKEN}`,
+      )
+        .then(() => {
+          console.log("Webhook settings applied to Telegram...");
+        })
+        .catch(() => {
+          console.error("Failed to apply webhook to Telegram...");
+        });
     });
 } else {
   bot.start();
