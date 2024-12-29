@@ -25,22 +25,46 @@ export const httpRouter = new Elysia({ prefix: "/api/v1" })
     },
     {
       params: t.Object({
-        userId: t.String(),
+        userId: t.String({
+          minLength: 1,
+          description: "ID Пользователя",
+        }),
       }),
       query: t.Object({
-        token: t.String(),
-        app: t.String(),
+        token: t.String({
+          minLength: 1,
+          description: "Токен юзера для приложения",
+        }),
+        app: t.String({
+          minLength: 1,
+          description: "Имя приложения",
+        }),
       }),
       response: t.Union([
-        t.Object({
-          status: t.Boolean({ default: true }),
-          balance: t.Number(),
-        }),
-        t.Object({
-          status: t.Boolean({ default: false }),
-          error: t.String(),
-        }),
+        t.Object(
+          {
+            status: t.Const(true),
+            balance: t.Number(),
+          },
+          {
+            description: "Удачно",
+          },
+        ),
+        t.Object(
+          {
+            status: t.Boolean({ default: false }),
+            error: t.String(),
+          },
+          {
+            description: "Произошла ошибка",
+          },
+        ),
       ]),
+      detail: {
+        summary: "Получить баланс юзера",
+        description:
+          "Возвращает баланс переданного юзера, если токен юзера для этого приложения корректный.",
+      },
     },
   )
   .post(
@@ -73,30 +97,50 @@ export const httpRouter = new Elysia({ prefix: "/api/v1" })
       params: t.Object({
         userId: t.String({
           minLength: 1,
+          description: "ID Получателя",
         }),
         amount: t.Number({
           minimum: 0,
+          description: "Сумма",
         }),
       }),
       query: t.Object({
         token: t.String({
           minLength: 1,
+          description: "Токен юзера для приложения",
         }),
         app: t.String({
           minLength: 1,
+          description: "Имя приложения",
         }),
         from: t.String({
           minLength: 1,
+          description: "ID Отправителя",
         }),
       }),
       response: t.Union([
-        t.Object({
-          status: t.Boolean({ default: true }),
-        }),
-        t.Object({
-          status: t.Boolean({ default: false }),
-          error: t.String(),
-        }),
+        t.Object(
+          {
+            status: t.Const(true),
+          },
+          {
+            description: "Удачно",
+          },
+        ),
+        t.Object(
+          {
+            status: t.Boolean({ default: false }),
+            error: t.String(),
+          },
+          {
+            description: "Произошла ошибка",
+          },
+        ),
       ]),
+      detail: {
+        summary: "Перевести средства между юзерами",
+        description:
+          "Возвращает баланс переданного юзера, если токен юзера для этого приложения корректный.",
+      },
     },
   );

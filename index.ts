@@ -15,20 +15,53 @@ bot.errorHandler = (error) => {
   console.error("[ERROR] Error: ", error);
 };
 
-// start Handlers for telegram and REST
+// Standard handlers for telegram
 telegramHandler(bot);
 
-// end
-
-const app = new Elysia()
-  .use(swagger())
-  .get("/", () => "Hello from CoinVault!")
-  .get("/health-check", ({ request }) => {
-    return { status: true, info: "All good!" };
+const app = new Elysia({})
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: "CoinVault Documentation",
+          version: APP_VERSION,
+        },
+      },
+      exclude: [`/${bot.token}`],
+    }),
+  )
+  .get("/", () => "Hello from CoinVault!", {
+    detail: {
+      summary: "Приветствие от CoinVault",
+      description: "Возвращает приветствие от CoinVault.",
+    },
   })
-  .get("/version", () => {
-    return { version: APP_VERSION };
-  })
+  .get(
+    "/health-check",
+    ({ request }) => {
+      return { status: true, info: "All good!" };
+    },
+    {
+      detail: {
+        summary: "Проверка статуса",
+        description:
+          "Возвращает поле status, если оно пришло и равно true - все хорошо.",
+      },
+    },
+  )
+  .get(
+    "/version",
+    () => {
+      return { version: APP_VERSION };
+    },
+    {
+      detail: {
+        summary: "Получить версию",
+        description: "Возвращает версию приложения.",
+      },
+    },
+  )
+  // standard handlers for HTTP
   .use(httpRouter);
 
 if (IS_PRODUCTION) {
@@ -50,7 +83,7 @@ if (IS_PRODUCTION) {
       );
 
       fetch(
-        `https://api.telegram.org/bot${BOT_TOKEN}/setWebhook?url=${BOT_DOMAIN}/${BOT_TOKEN}`,
+        `https://api.telegram.org/bot${bot.token}/setWebhook?url=${BOT_DOMAIN}/${bot.token}`,
       )
         .then(() => {
           console.log("Webhook settings applied to Telegram...");
